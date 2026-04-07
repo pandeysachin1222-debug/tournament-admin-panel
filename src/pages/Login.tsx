@@ -1,13 +1,32 @@
 import React from 'react';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { auth } from '../firebase';
+import { signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { auth, adminEmails } from '../firebase';
 import { Trophy } from 'lucide-react';
 
 export default function Login() {
+
   const handleLogin = async () => {
     const provider = new GoogleAuthProvider();
+
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      const userEmail = result.user.email;
+
+      // 🔐 Admin Check
+      if (!adminEmails.includes(userEmail!)) {
+        alert("Access Denied: Not an Admin");
+
+        // ❌ Logout immediately
+        await signOut(auth);
+        return;
+      }
+
+      // ✅ Success
+      alert("Welcome Admin 👑");
+
+      // 👉 Dashboard redirect
+      window.location.href = "/dashboard";
+
     } catch (error) {
       console.error('Login failed:', error);
     }
