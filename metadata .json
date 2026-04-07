@@ -1,0 +1,5 @@
+{
+  "name": "Tournament Admin Panel",
+  "description": "A comprehensive admin panel for managing tournaments, users, and financial requests.",
+  "requestFramePermissions": []
+}
