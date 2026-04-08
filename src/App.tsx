@@ -24,7 +24,7 @@ import { twMerge } from 'tailwind-merge';
 
 // Pages
 import Dashboard from './pages/Dashboard';
-import Tournaments from './pages/Tournaments';
+import Tournament from "./pages/Tournament";
 import RechargeRequests from './pages/RechargeRequests';
 import WithdrawRequests from './pages/WithdrawRequests';
 import Users from './pages/Users';
