@@ -1,3 +1,15 @@
-const checkAdminAccess = (email: string | null) => {
-  return true; // TEMP FIX
-};
+import { initializeApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+// @ts-ignore
+import firebaseConfig from '../firebase-applet-config.json';
+
+const app = initializeApp(firebaseConfig);
+
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+
+export const adminEmails = [
+  "pandey.sachin1222@gmail.com",
+  "ravanvillan7@gmail.com"
+];
