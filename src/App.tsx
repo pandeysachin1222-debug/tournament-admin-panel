@@ -91,8 +91,8 @@ export default function App() {
             <Route path="/" element={<Navigate to="/dashboard" />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/dashboard/tournaments" element={<Tournaments />} />
-            <Route path="/dashboard/recharge" element={<RechargeRequests />} />
-            <Route path="/dashboard/withdraw" element={<WithdrawRequests />} />
+            <Route path="/dashboard/recharge" element={<RechargeRequest />} />
+            <Route path="/dashboard/withdraw" element={<WithdrawRequest />} />
             <Route path="/dashboard/users" element={<Users />} />
             <Route path="/dashboard/results" element={<Results />} />
             <Route path="*" element={<Navigate to="/dashboard" />} />
