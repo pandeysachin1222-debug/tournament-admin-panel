@@ -1,0 +1,102 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Fields: uid, email, displayName, role, walletBalance, createdAt
+    //
+    // Collection: tournaments
+    // Fields: title, game, entryFee, prizePool, maxPlayers, commissionRate, profit, startTime, status, players, roomId, roomPass, resultDeclared
+    //
+    // Collection: rechargeRequests
+    // Fields: userId, userEmail, amount, status, createdAt
+    //
+    // Collection: withdrawRequests
+    // Fields: userId, userEmail, amount, status, createdAt
+    //
+    // Collection: results
+    // Fields: tournamentId, winners, uploadedAt
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+         request.auth.token.email == "ravanvillan7@gmail.com" ||
+         request.auth.token.email == "pandey.sachin1222@gmail.com");
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidTournament(data) {
+      return data.title is string && data.title.size() > 0 &&
+             data.game is string && data.game.size() > 0 &&
+             data.entryFee is number && data.entryFee >= 0 &&
+             data.prizePool is number && data.prizePool >= 0 &&
+             data.maxPlayers is number && data.maxPlayers > 0 &&
+             data.commissionRate is number && data.commissionRate >= 10 && data.commissionRate <= 15 &&
+             data.profit is number && data.profit >= 0 &&
+             data.startTime is string &&
+             data.status in ['upcoming', 'ongoing', 'completed'] &&
+             (!('roomId' in data) || data.roomId is string) &&
+             (!('roomPass' in data) || data.roomPass is string) &&
+             (!('resultDeclared' in data) || data.resultDeclared is bool);
+    }
+
+    // Admin Rules
+    match /admins/{uid} {
+      allow read: if isAuthenticated() && (uid == request.auth.uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // User Rules
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow create: if isAuthenticated() && isOwner(userId);
+      allow update: if isAdmin() || (isOwner(userId) && (
+        request.resource.data.role == resource.data.role ||
+        (request.resource.data.role == 'admin' && exists(/databases/$(database)/documents/admins/$(request.auth.uid)))
+      ));
+    }
+
+    // Tournament Rules
+    match /tournaments/{tournamentId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidTournament(request.resource.data);
+      allow update: if isAdmin() && isValidTournament(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Recharge Request Rules
+    match /recharge_requests/{requestId} {
+      allow read: if isAdmin() || (isAuthenticated() && request.auth.uid == resource.data.userId);
+      allow create: if isAuthenticated();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Withdraw Request Rules
+    match /withdraw_requests/{requestId} {
+      allow read: if isAdmin() || (isAuthenticated() && request.auth.uid == resource.data.userId);
+      allow create: if isAuthenticated();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Result Rules
+    match /results/{resultId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+  }
+}
