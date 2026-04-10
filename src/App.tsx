@@ -10,10 +10,7 @@ import {
   ArrowUpCircle, 
   Users as UsersIcon, 
   FileText, 
-  LogOut,
-  ShieldAlert,
-  Menu,
-  X
+  LogOut
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -59,9 +56,9 @@ export default function App() {
           createdAt: new Date().toISOString()
         });
       } else {
-        setIsAdmin(false);
-        setUser(null);
         await signOut(auth);
+        setUser(null);
+        setIsAdmin(false);
       }
 
       setLoading(false);
@@ -78,93 +75,86 @@ export default function App() {
     );
   }
 
-  if (isAdmin) {
-    return (
-      <Router>
+  return (
+    <Router>
+      {isAdmin ? (
         <AdminLayout user={user!}>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            {/* ✅ FIX HERE */}
-            <Route path="/dashboard/tournaments" element={<Tournament />} />
-            <Route path="/dashboard/recharge" element={<RechargeRequest />} />
-            <Route path="/dashboard/withdraw" element={<WithdrawRequest />} />
-            <Route path="/dashboard/users" element={<Users />} />
-            <Route path="/dashboard/results" element={<Results />} />
+
+            {/* 🔥 IMPORTANT FIX */}
+            <Route path="/tournaments" element={<Tournament />} />
+
+            <Route path="/recharge" element={<RechargeRequest />} />
+            <Route path="/withdraw" element={<WithdrawRequest />} />
+            <Route path="/users" element={<Users />} />
+            <Route path="/results" element={<Results />} />
+
             <Route path="*" element={<Navigate to="/dashboard" />} />
           </Routes>
         </AdminLayout>
-      </Router>
-    );
-  }
-
-  if (!user) {
-    return (
-      <Router>
+      ) : (
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="*" element={<Navigate to="/login" />} />
         </Routes>
-      </Router>
-    );
-  }
-
-  return <NotAuthorized />;
+      )}
+    </Router>
+  );
 }
 
+// 🔥 ADMIN LAYOUT
 function AdminLayout({ children, user }: { children: React.ReactNode, user: UserProfile }) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const location = useLocation();
 
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { name: 'Tournaments', path: '/dashboard/tournaments', icon: Trophy },
-    { name: 'Recharge Requests', path: '/dashboard/recharge', icon: ArrowDownCircle },
-    { name: 'Withdraw Requests', path: '/dashboard/withdraw', icon: ArrowUpCircle },
-    { name: 'Results', path: '/dashboard/results', icon: FileText },
-    { name: 'Users', path: '/dashboard/users', icon: UsersIcon },
+    { name: 'Tournaments', path: '/tournaments', icon: Trophy },
+    { name: 'Recharge', path: '/recharge', icon: ArrowDownCircle },
+    { name: 'Withdraw', path: '/withdraw', icon: ArrowUpCircle },
+    { name: 'Results', path: '/results', icon: FileText },
+    { name: 'Users', path: '/users', icon: UsersIcon },
   ];
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex">
-      <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 w-64 bg-zinc-900 border-r border-zinc-800 transition-transform",
-        !isSidebarOpen && "-translate-x-full"
-      )}>
-        <div className="p-6">
-          <h1 className="text-xl font-bold mb-6">Admin Panel</h1>
+    <div className="min-h-screen bg-zinc-950 text-white flex">
+      {/* Sidebar */}
+      <aside className="w-64 bg-zinc-900 border-r border-zinc-800 p-6">
+        <h1 className="text-xl font-bold mb-6">Admin Panel</h1>
 
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link key={item.path} to={item.path} className="flex items-center gap-2 p-2 hover:bg-zinc-800 rounded">
-                <Icon className="w-4 h-4" />
-                {item.name}
-              </Link>
-            );
-          })}
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = location.pathname === item.path;
 
-          <button 
-            onClick={() => signOut(auth)}
-            className="mt-6 flex items-center gap-2 text-red-400"
-          >
-            <LogOut className="w-4 h-4" />
-            Logout
-          </button>
-        </div>
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={cn(
+                "flex items-center gap-2 p-3 rounded-lg mb-2",
+                isActive ? "bg-emerald-500 text-black" : "hover:bg-zinc-800"
+              )}
+            >
+              <Icon className="w-4 h-4" />
+              {item.name}
+            </Link>
+          );
+        })}
+
+        <button
+          onClick={() => signOut(auth)}
+          className="mt-6 flex items-center gap-2 text-red-400"
+        >
+          <LogOut className="w-4 h-4" />
+          Logout
+        </button>
       </aside>
 
+      {/* Main */}
       <main className="flex-1 p-6">
         {children}
       </main>
-    </div>
-  );
-}
-
-function NotAuthorized() {
-  return (
-    <div className="min-h-screen flex items-center justify-center text-white">
-      Access Denied
     </div>
   );
 }
