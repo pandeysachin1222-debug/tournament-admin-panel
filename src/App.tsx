@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
-import { onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db, adminEmails } from './firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { auth, adminEmails } from './firebase';
 import { UserProfile } from './types';
-import { handleFirestoreError, OperationType } from './utils/errorHandling';
 import { 
   LayoutDashboard, 
   Trophy, 
-  Wallet, 
   ArrowDownCircle, 
   ArrowUpCircle, 
   Users as UsersIcon, 
@@ -18,7 +15,6 @@ import {
   Menu,
   X
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -76,9 +72,8 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-4">
-        <div className="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
-        <p className="text-zinc-400 font-medium animate-pulse text-sm tracking-wider uppercase">Loading...</p>
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <p className="text-white">Loading...</p>
       </div>
     );
   }
@@ -90,7 +85,8 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/dashboard/tournaments" element={<Tournaments />} />
+            {/* ✅ FIX HERE */}
+            <Route path="/dashboard/tournaments" element={<Tournament />} />
             <Route path="/dashboard/recharge" element={<RechargeRequest />} />
             <Route path="/dashboard/withdraw" element={<WithdrawRequest />} />
             <Route path="/dashboard/users" element={<Users />} />
@@ -116,49 +112,6 @@ export default function App() {
   return <NotAuthorized />;
 }
 
-function PublicHome({ user }: { user: UserProfile | null }) {
-  return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center justify-center p-6 text-center">
-      <div className="w-20 h-20 bg-emerald-500 rounded-3xl flex items-center justify-center mb-8 shadow-2xl shadow-emerald-500/20">
-        <Trophy className="text-zinc-950 w-10 h-10" />
-      </div>
-      <h1 className="text-4xl font-bold mb-4 tracking-tight">Tournament Platform</h1>
-      <p className="text-zinc-400 max-w-md mb-10 leading-relaxed">
-        Welcome to the gaming arena. This is the public landing page. 
-        Administrative features are restricted to authorized personnel.
-      </p>
-      
-      {user ? (
-        <div className="space-y-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex items-center gap-4 text-left">
-            <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center font-bold">
-              {user.displayName[0]}
-            </div>
-            <div>
-              <p className="font-medium">{user.displayName}</p>
-              <p className="text-xs text-zinc-500">{user.email}</p>
-            </div>
-          </div>
-          <button 
-            onClick={() => signOut(auth)}
-            className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
-          >
-            <LogOut className="w-4 h-4" />
-            Sign Out
-          </button>
-        </div>
-      ) : (
-        <Link 
-          to="/login"
-          className="px-8 py-3 bg-emerald-500 text-zinc-950 rounded-xl font-bold hover:bg-emerald-400 transition-all"
-        >
-          Go to Login
-        </Link>
-      )}
-    </div>
-  );
-}
-
 function AdminLayout({ children, user }: { children: React.ReactNode, user: UserProfile }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const location = useLocation();
@@ -174,74 +127,35 @@ function AdminLayout({ children, user }: { children: React.ReactNode, user: User
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex">
-      {/* Sidebar */}
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 w-64 bg-zinc-900 border-r border-zinc-800 transition-transform duration-300 lg:relative lg:translate-x-0",
-        !isSidebarOpen && "-translate-x-full lg:hidden"
+        "fixed inset-y-0 left-0 z-50 w-64 bg-zinc-900 border-r border-zinc-800 transition-transform",
+        !isSidebarOpen && "-translate-x-full"
       )}>
-        <div className="h-full flex flex-col p-6">
-          <div className="flex items-center gap-3 mb-10">
-            <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center">
-              <Trophy className="text-zinc-950 w-6 h-6" />
-            </div>
-            <h1 className="text-xl font-bold tracking-tight">Admin Panel</h1>
-          </div>
+        <div className="p-6">
+          <h1 className="text-xl font-bold mb-6">Admin Panel</h1>
 
-          <nav className="flex-1 space-y-2">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.path;
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group",
-                    isActive 
-                      ? "bg-emerald-500 text-zinc-950 font-medium" 
-                      : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
-                  )}
-                >
-                  <Icon className={cn("w-5 h-5", isActive ? "text-zinc-950" : "group-hover:text-emerald-500")} />
-                  {item.name}
-                </Link>
-              );
-            })}
-          </nav>
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link key={item.path} to={item.path} className="flex items-center gap-2 p-2 hover:bg-zinc-800 rounded">
+                <Icon className="w-4 h-4" />
+                {item.name}
+              </Link>
+            );
+          })}
 
-          <div className="mt-auto pt-6 border-t border-zinc-800">
-            <div className="flex items-center gap-3 mb-4 px-4">
-              <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-bold">
-                {user.displayName[0]}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{user.displayName}</p>
-                <p className="text-xs text-zinc-500 truncate">{user.email}</p>
-              </div>
-            </div>
-            <button 
-              onClick={() => signOut(auth)}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-zinc-400 hover:bg-red-500/10 hover:text-red-500 transition-all duration-200"
-            >
-              <LogOut className="w-5 h-5" />
-              Sign Out
-            </button>
-          </div>
+          <button 
+            onClick={() => signOut(auth)}
+            className="mt-6 flex items-center gap-2 text-red-400"
+          >
+            <LogOut className="w-4 h-4" />
+            Logout
+          </button>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 border-b border-zinc-800 flex items-center justify-between px-6 lg:hidden">
-          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
-            {isSidebarOpen ? <X /> : <Menu />}
-          </button>
-          <h1 className="font-bold">Admin Panel</h1>
-          <div className="w-6" />
-        </header>
-        <div className="p-6 lg:p-10 max-w-7xl mx-auto w-full">
-          {children}
-        </div>
+      <main className="flex-1 p-6">
+        {children}
       </main>
     </div>
   );
@@ -249,23 +163,8 @@ function AdminLayout({ children, user }: { children: React.ReactNode, user: User
 
 function NotAuthorized() {
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-6">
-      <div className="max-w-md w-full bg-zinc-900 border border-zinc-800 rounded-3xl p-8 text-center">
-        <div className="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
-          <ShieldAlert className="text-red-500 w-8 h-8" />
-        </div>
-        <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
-        <p className="text-zinc-400 mb-8">
-          You do not have administrative privileges to access this panel. 
-          Please contact the system administrator if you believe this is an error.
-        </p>
-        <button 
-          onClick={() => signOut(auth)}
-          className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 rounded-xl font-medium transition-colors"
-        >
-          Sign Out
-        </button>
-      </div>
+    <div className="min-h-screen flex items-center justify-center text-white">
+      Access Denied
     </div>
   );
 }
