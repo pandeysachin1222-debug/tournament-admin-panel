@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, getDocs, updateDoc, doc, orderBy, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 import { UserProfile } from '../types';
 import { handleFirestoreError, OperationType } from '../utils/errorHandling';
-import { Users as UsersIcon, Search, Shield, Wallet, Calendar, ShieldCheck, Plus, Trash2 } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 export default function Users() {
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -15,7 +15,12 @@ export default function Users() {
     try {
       const usersQ = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
       const usersSnap = await getDocs(usersQ);
-      const usersData = usersSnap.docs.map(doc => ({ ...doc.data() } as UserProfile));
+
+      const usersData = usersSnap.docs.map(doc => ({
+        uid: doc.id,
+        ...(doc.data() as Omit<UserProfile, 'uid'>)
+      }));
+
       setUsers(usersData);
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'users');
@@ -29,8 +34,8 @@ export default function Users() {
   }, []);
 
   const filteredUsers = users.filter(u => 
-    u.email.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    u.displayName.toLowerCase().includes(searchTerm.toLowerCase())
+    (u.email || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (u.displayName || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -65,49 +70,62 @@ export default function Users() {
                   <th className="px-6 py-4">Joined</th>
                 </tr>
               </thead>
+
               <tbody className="divide-y divide-zinc-800">
                 {loading ? (
                   [1, 2, 3].map(i => (
                     <tr key={i} className="animate-pulse">
-                      <td colSpan={4} className="px-6 py-8"><div className="h-4 bg-zinc-800 rounded w-full" /></td>
+                      <td colSpan={4} className="px-6 py-8">
+                        <div className="h-4 bg-zinc-800 rounded w-full" />
+                      </td>
                     </tr>
                   ))
                 ) : filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-6 py-12 text-center text-zinc-500">No users found</td>
+                    <td colSpan={4} className="px-6 py-12 text-center text-zinc-500">
+                      No users found
+                    </td>
                   </tr>
                 ) : (
                   filteredUsers.map((u) => (
-                    <tr key={u.uid} className="hover:bg-zinc-800/30 transition-colors">
+                    <tr key={u.uid || Math.random()} className="hover:bg-zinc-800/30 transition-colors">
                       <td className="px-6 py-6">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center font-bold text-emerald-500">
-                            {u.displayName[0]}
+                            {(u.displayName || "U")[0]}
                           </div>
                           <div>
-                            <p className="font-medium">{u.displayName}</p>
-                            <p className="text-xs text-zinc-500">{u.email}</p>
+                            <p className="font-medium">{u.displayName || "Unknown"}</p>
+                            <p className="text-xs text-zinc-500">{u.email || "No Email"}</p>
                           </div>
                         </div>
                       </td>
+
                       <td className="px-6 py-6">
                         <span className={cn(
                           "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider",
-                          u.email === 'pandey.sachin1222@gmail.com' ? "bg-purple-500/10 text-purple-500" : "bg-zinc-800 text-zinc-400"
+                          u.email === 'pandey.sachin1222@gmail.com'
+                            ? "bg-purple-500/10 text-purple-500"
+                            : "bg-zinc-800 text-zinc-400"
                         )}>
                           {u.email === 'pandey.sachin1222@gmail.com' ? 'admin' : 'user'}
                         </span>
                       </td>
+
                       <td className="px-6 py-6 font-bold text-emerald-500">
                         ${(u.walletBalance || 0).toLocaleString()}
                       </td>
+
                       <td className="px-6 py-6 text-sm text-zinc-400">
-                        {new Date(u.createdAt).toLocaleDateString()}
+                        {u.createdAt
+                          ? new Date(u.createdAt).toLocaleDateString()
+                          : "N/A"}
                       </td>
                     </tr>
                   ))
                 )}
               </tbody>
+
             </table>
           </div>
         </div>
@@ -118,4 +136,4 @@ export default function Users() {
 
 function cn(...inputs: any[]) {
   return inputs.filter(Boolean).join(' ');
-}
+        }
