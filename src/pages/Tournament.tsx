@@ -29,7 +29,7 @@ export default function Tournaments() {
   const fetchTournaments = async () => {
     setLoading(true);
     try {
-      const q = query(collection(db, 'tournaments'), orderBy('startTime', 'desc'));
+      const q = query(collection(db, 'tournaments'), orderBy('createdAt', 'desc'));
       const snap = await getDocs(q);
       const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tournament));
       setTournaments(data);
